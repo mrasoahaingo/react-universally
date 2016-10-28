@@ -1,8 +1,5 @@
 /* @flow */
 
-// Polyfill "fetch" api, required by apollo.
-import fetch from 'isomorphic-fetch';
-
 import type { $Request, $Response, Middleware } from 'express';
 import React from 'react';
 import { ServerRouter, createServerRenderContext } from 'react-router';
