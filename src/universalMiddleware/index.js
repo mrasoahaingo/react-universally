@@ -40,6 +40,7 @@ function universalReactAppMiddleware(request: $Request, response: $Response) {
       // transfer request headers to networkInterface so that they're accessible to proxy server
       // Addresses this issue: https://github.com/matthew-andrews/isomorphic-fetch/issues/83
       headers: request.headers,
+      ssrMode: true,
     }),
   });
 
