@@ -1,9 +1,14 @@
 /* @flow */
 
+// Polyfill "fetch" api, required by apollo.
+import fetch from 'isomorphic-fetch';
+
 import type { $Request, $Response, Middleware } from 'express';
 import React from 'react';
 import { ServerRouter, createServerRenderContext } from 'react-router';
-import { Provider } from 'react-redux';
+import ApolloClient, { createNetworkInterface } from 'apollo-client';
+import { ApolloProvider } from 'react-apollo';
+import { getDataFromTree } from 'react-apollo/server';
 import render from './render';
 import runTasksForLocation from '../shared/universal/routeTasks/runTasksForLocation';
 import App from '../shared/universal/components/App';
@@ -24,9 +29,23 @@ function universalReactAppMiddleware(request: $Request, response: $Response) {
     return;
   }
 
+  // Create our apollo client.
+  const apolloClient = new ApolloClient({
+    ssrMode: true,
+    // Remember that this is the interface the SSR server will use to connect to the
+    // API server, so we need to ensure it isn't firewalled, etc
+    networkInterface: createNetworkInterface({
+      uri: `http://localhost:${process.env.SERVER_PORT}/graphql`,
+      credentials: 'same-origin',
+      // transfer request headers to networkInterface so that they're accessible to proxy server
+      // Addresses this issue: https://github.com/matthew-andrews/isomorphic-fetch/issues/83
+      headers: request.headers,
+    }),
+  });
+
   // Create the redux store.
-  const store = configureStore();
-  const { dispatch, getState } = store;
+  const store = configureStore(apolloClient);
+  const { dispatch } = store;
 
   // Set up a function we can call to render the app and return the result via
   // the response.
@@ -41,42 +60,44 @@ function universalReactAppMiddleware(request: $Request, response: $Response) {
         location={request.url}
         context={context}
       >
-        <Provider store={store}>
+        <ApolloProvider store={store} client={apolloClient}>
           <App />
-        </Provider>
+        </ApolloProvider>
       </ServerRouter>
     );
 
-    // Render the app to a string.
-    const html = render(
-      // Provide the full app react element.
-      app,
-      // Provide the redux store state, this will be bound to the window.APP_STATE
-      // so that we can rehydrate the state on the client.
-      getState()
-    );
+    getDataFromTree(app).then((apolloContext) => {
+      // Render the app to a string.
+      const html = render(
+        // Provide the full app react element.
+        app,
+        // Provide the redux store state, this will be bound to the window.APP_STATE
+        // so that we can rehydrate the state on the client.
+        apolloContext.store.getState()
+      );
 
-    // Get the render result from the server render context.
-    const renderResult = context.getResult();
+      // Get the render result from the server render context.
+      const renderResult = context.getResult();
 
-    // Check if the render result contains a redirect, if so we need to set
-    // the specific status and redirect header and end the response.
-    if (renderResult.redirect) {
-      response.status(301).setHeader('Location', renderResult.redirect.pathname);
-      response.end();
-      return;
-    }
+      // Check if the render result contains a redirect, if so we need to set
+      // the specific status and redirect header and end the response.
+      if (renderResult.redirect) {
+        response.status(301).setHeader('Location', renderResult.redirect.pathname);
+        response.end();
+        return;
+      }
 
-    response
-      .status(
-        renderResult.missed
-          // If the renderResult contains a "missed" match then we set a 404 code.
-          // Our App component will handle the rendering of an Error404 view.
-          ? 404
-          // Otherwise everything is all good and we send a 200 OK status.
-          : 200
-      )
-      .send(html);
+      response
+        .status(
+          renderResult.missed
+            // If the renderResult contains a "missed" match then we set a 404 code.
+            // Our App component will handle the rendering of an Error404 view.
+            ? 404
+            // Otherwise everything is all good and we send a 200 OK status.
+            : 200
+        )
+        .send(html);
+    }).catch(err => console.log(err));
   };
 
   // Execute any 'prefetchData' tasks that get matched for the request location.

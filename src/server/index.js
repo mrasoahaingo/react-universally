@@ -4,6 +4,10 @@
 // This grants us source map support, which combined with our webpack source
 // maps will give us nice stack traces.
 import 'source-map-support/register';
+
+// Polyfill "fetch" api, required by apollo.
+import fetch from 'isomorphic-fetch';
+
 import path from 'path';
 import appRoot from 'app-root-path';
 import express from 'express';

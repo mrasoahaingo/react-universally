@@ -12,7 +12,9 @@ import TaskRoutesExecutor from './components/TaskRoutesExecutor';
 import App from '../shared/universal/components/App';
 
 // Create the apollo graphql client.
-const apolloClient = new ApolloClient();
+const apolloClient = new ApolloClient({
+  initialState: window.APP_STATE,
+});
 
 // Get the DOM Element that will host our React application.
 const container = document.querySelector('#app');
