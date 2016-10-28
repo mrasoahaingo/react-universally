@@ -2,7 +2,7 @@ import { makeExecutableSchema } from 'graphql-tools';
 
 const typeDefs = [`
 type Query {
-  hello: String
+  applicationName: String
 }
 
 schema {
@@ -11,8 +11,8 @@ schema {
 
 const resolvers = {
   Query: {
-    hello(root) {
-      return 'world';
+    applicationName() {
+      return 'react-universally';
     },
   },
 };

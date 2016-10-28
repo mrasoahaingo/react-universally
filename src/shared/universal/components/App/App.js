@@ -76,6 +76,15 @@ function App() {
         }
       />
 
+      <Match
+        pattern="/foo"
+        render={routerProps =>
+          <CodeSplit module={System.import('./Foo')}>
+            { Foo => Foo && <Foo {...routerProps} /> }
+          </CodeSplit>
+        }
+      />
+
       <Miss component={Error404} />
     </div>
   );
