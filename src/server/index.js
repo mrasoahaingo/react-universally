@@ -11,6 +11,9 @@ import type { $Request, $Response, NextFunction } from 'express';
 import compression from 'compression';
 import hpp from 'hpp';
 import helmet from 'helmet';
+import bodyParser from 'body-parser';
+import { apolloExpress, graphiqlExpress } from 'apollo-server';
+import graphqlSchema from './graphql/schema';
 import universalMiddleware from './middleware/universalMiddleware';
 import { notEmpty } from '../shared/universal/utils/guards';
 
@@ -68,6 +71,10 @@ if (process.env.NODE_ENV === 'production') {
     )
   );
 }
+
+// Our apollo stack graphql server endpoints.
+app.use('/graphql', bodyParser.json(), apolloExpress({ schema: graphqlSchema }));
+app.use('/graphiql', graphiqlExpress({ endpointURL: '/graphql' }));
 
 // The universal middleware for our React application.
 app.get('*', universalMiddleware);

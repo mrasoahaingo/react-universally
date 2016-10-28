@@ -4,17 +4,22 @@
 import React from 'react';
 import { render } from 'react-dom';
 import { BrowserRouter } from 'react-router';
-import { Provider } from 'react-redux';
+import ApolloClient from 'apollo-client';
+import { ApolloProvider } from 'react-apollo';
 import configureStore from '../shared/universal/redux/configureStore';
 import ReactHotLoader from './components/ReactHotLoader';
 import TaskRoutesExecutor from './components/TaskRoutesExecutor';
 import App from '../shared/universal/components/App';
+
+// Create the apollo graphql client.
+const apolloClient = new ApolloClient();
 
 // Get the DOM Element that will host our React application.
 const container = document.querySelector('#app');
 
 // Create our Redux store.
 const store = configureStore(
+  apolloClient,
   // Server side rendering would have mounted our state on this global.
   window.APP_STATE
 );
@@ -22,7 +27,7 @@ const store = configureStore(
 function renderApp(TheApp) {
   render(
     <ReactHotLoader>
-      <Provider store={store}>
+      <ApolloProvider store={store} client={apolloClient}>
         <BrowserRouter>
           {
             routerProps =>
@@ -31,7 +36,7 @@ function renderApp(TheApp) {
               </TaskRoutesExecutor>
           }
         </BrowserRouter>
-      </Provider>
+      </ApolloProvider>
     </ReactHotLoader>,
     container
   );

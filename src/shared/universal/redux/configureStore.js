@@ -1,12 +1,14 @@
 /* @flow */
 
-import { createStore, applyMiddleware, compose } from 'redux';
+import { createStore, applyMiddleware, compose, combineReducers } from 'redux';
 import thunk from 'redux-thunk';
 import axios from 'axios';
-import reducer from '../reducers';
+import type { Reducer } from 'redux';
+import reducers from '../reducers';
 import type { State } from '../reducers';
+import type { Action } from '../types/redux';
 
-function configureStore(initialState: ?State) {
+function configureStore(apolloClient, initialState: ?State) {
   const enhancers = compose(
     // Middleware store enhancer.
     applyMiddleware(
@@ -14,7 +16,8 @@ function configureStore(initialState: ?State) {
       // arguments to all the redux-thunk actions. Below we are passing a
       // preconfigured axios instance which can be used to fetch data with.
       // @see https://github.com/gaearon/redux-thunk
-      thunk.withExtraArgument({ axios })
+      thunk.withExtraArgument({ axios }),
+      apolloClient.middleware(),
     ),
     // Redux Dev Tools store enhancer.
     // @see https://github.com/zalmoxisus/redux-devtools-extension
@@ -27,6 +30,16 @@ function configureStore(initialState: ?State) {
       ? window.devToolsExtension()
       // Else we return a no-op function.
       : f => f
+  );
+
+  const reducer : Reducer<State, Action> = combineReducers(
+    Object.assign(
+      {},
+      reducers,
+      {
+        apollo: apolloClient.reducer(),
+      }
+    )
   );
 
   const store = initialState
