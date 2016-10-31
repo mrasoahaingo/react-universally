@@ -33,11 +33,12 @@ function universalReactAppMiddleware(request: $Request, response: $Response) {
     // API server, so we need to ensure it isn't firewalled, etc
     networkInterface: createNetworkInterface({
       uri: `http://localhost:${process.env.SERVER_PORT}/graphql`,
-      credentials: 'same-origin',
-      // transfer request headers to networkInterface so that they're accessible to proxy server
-      // Addresses this issue: https://github.com/matthew-andrews/isomorphic-fetch/issues/83
-      headers: request.headers,
-      ssrMode: true,
+      opts: {
+        credentials: 'same-origin',
+        // transfer request headers to networkInterface so that they're accessible to proxy server
+        // Addresses this issue: https://github.com/matthew-andrews/isomorphic-fetch/issues/83
+        headers: request.headers,
+      },
     }),
   });
 
@@ -65,13 +66,26 @@ function universalReactAppMiddleware(request: $Request, response: $Response) {
     );
 
     getDataFromTree(app).then((apolloContext) => {
+      // Get our initial app state from Apollo store.
+      const initialState = apolloContext.store.getState();
+      // Here we have to prune the queries from the initial state
+      // before sending it to the client to fix this issue:
+      // https://github.com/apollostack/apollo-client/issues/845
+      // Hopefully Apollo maintiners will have a better fix.
+      Object.keys(initialState.apollo).forEach((key) => {
+        if (key === 'queries') {
+          // Set the key to empty object, because removing it breaks
+          // the client.
+          initialState.apollo[key] = {};
+        }
+      });
       // Render the app to a string.
       const html = render(
         // Provide the full app react element.
         app,
         // Provide the redux store state, this will be bound to the window.APP_STATE
         // so that we can rehydrate the state on the client.
-        apolloContext.store.getState()
+        initialState
       );
 
       // Get the render result from the server render context.

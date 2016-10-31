@@ -6,7 +6,7 @@
 import 'source-map-support/register';
 
 // Polyfill "fetch" api, required by apollo.
-import fetch from 'isomorphic-fetch';
+import fetch from 'isomorphic-fetch'; // eslint-disable-line no-unused-vars
 
 import path from 'path';
 import appRoot from 'app-root-path';
