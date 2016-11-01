@@ -59,6 +59,9 @@ if (process.env.NODE_ENV === 'development') {
       `localhost:${notEmpty(process.env.CLIENT_DEVSERVER_PORT)}`
     )
   );
+  // Graphiql needs the following
+  cspConfig.directives.scriptSrc.push('cdn.jsdelivr.net');
+  cspConfig.directives.styleSrc.push('cdn.jsdelivr.net');
 }
 app.use(helmet.contentSecurityPolicy(cspConfig));
 app.use(helmet.xssFilter());
@@ -95,7 +98,10 @@ if (process.env.NODE_ENV === 'production') {
 
 // Our apollo stack graphql server endpoints.
 app.use('/graphql', bodyParser.json(), apolloExpress({ schema: graphqlSchema }));
-app.use('/graphiql', graphiqlExpress({ endpointURL: '/graphql' }));
+if (process.env.NODE_ENV === 'development') {
+  // Enable the useful graphiql tool for development only.
+  app.use('/graphiql', graphiqlExpress({ endpointURL: '/graphql' }));
+}
 
 // The universal middleware for our React application.
 app.get('*', universalMiddleware);
