@@ -9,6 +9,14 @@ I'll map them as follows:
   - Minor: New features or changes to the build tools.
   - Patch: Small(ish) fixes/restructuring that I expect will take minimal effort to merge in.
 
+# [8.4.1] - 2016-11-02
+
+## Added
+
+Dockerfile and a Docker-Compose file.  
+
+Configured for use during development. Production files potentially to come at a later date. Base image is Alpine Linux. Node version is 7. Yarn is preinstalled on the base image because of its tremendous speed advantage over npm. If you're project has a yarn.lock file, it gets copied over to the image on build.
+
 ## [8.4.0] - 2016-11-02
 
 ## Changed

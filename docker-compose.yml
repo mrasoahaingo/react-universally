@@ -1,0 +1,18 @@
+version: '2'
+services:
+
+  reactapp:
+    build: .
+    container_name: reactapp
+    ports:
+      - "1337:1337"
+      - "7331:7331"
+
+    volumes:
+      - .:/app
+    networks:
+      - reactuni
+
+networks:
+  reactuni:
+    driver: bridge
