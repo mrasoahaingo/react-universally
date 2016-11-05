@@ -3,4 +3,11 @@
 // This allows us to build up our babel config in a much more dynamic fashion
 // easily targetting a mix mash of server vs browser vs dev vs prod etc.
 // @see webpackConfigFactory.js
-{}
+{
+  "env": {
+    "test": {
+      "presets": ["latest", "react"],
+      "plugins": ["transform-class-properties", "transform-es2015-destructuring", "transform-object-rest-spread"]
+    }
+  }
+}

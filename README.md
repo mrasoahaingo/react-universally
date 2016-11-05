@@ -259,6 +259,10 @@ For those of us not wanting to use `flow`. Running this command removes everythi
 
 __Warning:__ This is a destructive behavior - it modifies your actual source files. Please make sure you commit any existing changes to your src before running this command.
 
+### `npm run test`  
+
+Launches the Jest CLI and begins running tests. All Jest configuration is handled within the `package.json`.
+
 
 ## Troubleshooting ##
 
