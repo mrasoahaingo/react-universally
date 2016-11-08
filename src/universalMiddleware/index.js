@@ -5,7 +5,9 @@ import React from 'react';
 import { ServerRouter, createServerRenderContext } from 'react-router';
 import ApolloClient, { createNetworkInterface } from 'apollo-client';
 import { ApolloProvider } from 'react-apollo';
-import { getDataFromTree } from 'react-apollo/server';
+import { renderToStringWithData } from 'react-apollo/server';
+import { CodeSplitProvider, createRenderContext } from 'code-split-component';
+import Helmet from 'react-helmet';
 import render from './render';
 import runTasksForLocation from '../shared/universal/routeTasks/runTasksForLocation';
 import App from '../shared/universal/components/App';
@@ -15,18 +17,25 @@ import configureStore from '../shared/universal/redux/configureStore';
  * An express middleware that is capabable of doing React server side rendering.
  */
 function universalReactAppMiddleware(request: $Request, response: $Response) {
+  // We should have had a nonce provided to us.  See the server/index.js for
+  // more information on what this is.
   if (typeof response.locals.nonce !== 'string') {
     throw new Error('A "nonce" value has not been attached to the response');
   }
   const nonce = response.locals.nonce;
 
+  // It's possible to disable SSR, which can be useful in development mode.
+  // In this case traditional client side only rendering will occur.
   if (process.env.DISABLE_SSR === 'true') {
     if (process.env.NODE_ENV === 'development') {
       console.log('==> Handling react route without SSR');  // eslint-disable-line no-console
     }
     // SSR is disabled so we will just return an empty html page and will
     // rely on the client to initialize and render the react application.
-    const html = render({ nonce });
+    const html = render({
+      // Nonce which allows us to safely declare inline scripts.
+      nonce,
+    });
     response.status(200).send(html);
     return;
   }
@@ -56,23 +65,28 @@ function universalReactAppMiddleware(request: $Request, response: $Response) {
   const renderApp = () => {
     // First create a context for <ServerRouter>, which will allow us to
     // query for the results of the render.
-    const context = createServerRenderContext();
+    const reactRouterContext = createServerRenderContext();
 
-    // Create the application react element.
+    // We also create a context for our <CodeSplitProvider> which will allow us
+    // to query which chunks/modules were used during the render process.
+    const codeSplitContext = createRenderContext();
+
+    // Create our application
+    // Apollo will render it to a string for us using renderToStringWithData below
     const app = (
-      <ServerRouter
-        location={request.url}
-        context={context}
-      >
-        <ApolloProvider store={store} client={apolloClient}>
-          <App />
-        </ApolloProvider>
-      </ServerRouter>
+      <CodeSplitProvider context={codeSplitContext}>
+        <ServerRouter
+          location={request.url}
+          context={reactRouterContext}
+        >
+          <ApolloProvider store={store} client={apolloClient}>
+            <App />
+          </ApolloProvider>
+        </ServerRouter>
+      </CodeSplitProvider>
     );
 
-    getDataFromTree(app).then((apolloContext) => {
-      // Get our initial app state from Apollo store.
-      const initialState = apolloContext.store.getState();
+    renderToStringWithData(app).then(({ markup, initialState }) => {
       // Here we have to prune the queries from the initial state
       // before sending it to the client to fix this issue:
       // https://github.com/apollostack/apollo-client/issues/845
@@ -87,16 +101,23 @@ function universalReactAppMiddleware(request: $Request, response: $Response) {
       // Render the app to a string.
       const html = render({
         // Provide the full app react element.
-        app,
-        // Provide the redux store state, this will be bound to the window.APP_STATE
-        // so that we can rehydrate the state on the client.
-        initialState,
-        // The nonce for inline script security.
+        markup,
+        // Nonce which allows us to safely declare inline scripts.
         nonce,
+        // Running this gets all the helmet properties (e.g. headers/scripts/title etc)
+        // that need to be included within our html.  It's based on the rendered app.
+        // @see https://github.com/nfl/react-helmet
+        helmet: Helmet.rewind(),
+        // We provide our code split state so that it can be included within the
+        // html, and then the client bundle can use this data to know which chunks/
+        // modules need to be rehydrated prior to the application being rendered.
+        codeSplitState: codeSplitContext.getState(),
+        // Apollo and Redux initial state
+        initialState,
       });
 
       // Get the render result from the server render context.
-      const renderResult = context.getResult();
+      const renderResult = reactRouterContext.getResult();
 
       // Check if the render result contains a redirect, if so we need to set
       // the specific status and redirect header and end the response.
@@ -113,7 +134,7 @@ function universalReactAppMiddleware(request: $Request, response: $Response) {
             // Our App component will handle the rendering of an Error404 view.
             ? 404
             // Otherwise everything is all good and we send a 200 OK status.
-            : 200
+            : 200,
         )
         .send(html);
     }).catch(err => console.log(err));
