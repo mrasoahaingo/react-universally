@@ -2,6 +2,7 @@
 
 import type { $Request, $Response, Middleware } from 'express';
 import React from 'react';
+import { renderToString } from 'react-dom/server';
 import { ServerRouter, createServerRenderContext } from 'react-router';
 import ApolloClient, { createNetworkInterface } from 'apollo-client';
 import { ApolloProvider } from 'react-apollo';
@@ -95,7 +96,7 @@ function universalReactAppMiddleware(request: $Request, response: $Response) {
         if (key === 'queries') {
           // Set the key to empty object, because removing it breaks
           // the client.
-          initialState.apollo[key] = {};
+          initialState.apollo[key] = {}; // eslint-disable-line no-param-reassign
         }
       });
       // Render the app to a string.
