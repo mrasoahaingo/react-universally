@@ -1,3 +1,3 @@
-import Foo from './Foo';
+/* @flow */
 
-export default Foo;
+export { default } from './Foo';
